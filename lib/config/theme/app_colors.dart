@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
-  // Primary Blue Gradient
-  static const Color primaryBlue = Color(0xFF1976D2);
-  static const Color secondaryBlue = Color(0xFF42A5F5);
-  static const Color tertiaryBlue = Color(0xFF64B5F6);
+  // Primary Lime Green
+  static const Color primaryLime = Color(0xFFD6FF3F);
+  static const Color secondaryLime = Color(0xFFBFE830);
+  static const Color tertiaryLime = Color(0xFFA8D121);
 
   // Background Colors
   static const Color lightBackground = Color(0xFFF5F7FA);
@@ -17,20 +17,20 @@ class AppColors {
   static const Color warning = Colors.amber;
 
   // Gradients
-  static const LinearGradient blueGradient = LinearGradient(
+  static const LinearGradient limeGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [primaryBlue, secondaryBlue, tertiaryBlue],
+    colors: [primaryLime, secondaryLime, tertiaryLime],
   );
 
-  static LinearGradient blueGradientWithOpacity(double opacity) {
+  static LinearGradient limeGradientWithOpacity(double opacity) {
     return LinearGradient(
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
       colors: [
-        primaryBlue.withOpacity(opacity * 0.9),
-        secondaryBlue.withOpacity(opacity * 0.8),
-        tertiaryBlue.withOpacity(opacity * 0.7),
+        primaryLime.withOpacity(opacity * 0.9),
+        secondaryLime.withOpacity(opacity * 0.8),
+        tertiaryLime.withOpacity(opacity * 0.7),
       ],
     );
   }

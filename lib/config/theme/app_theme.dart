@@ -7,9 +7,9 @@ class AppTheme {
       useMaterial3: true,
       brightness: Brightness.light,
       colorScheme: const ColorScheme.light(
-        primary: AppColors.primaryBlue,
-        secondary: AppColors.secondaryBlue,
-        tertiary: AppColors.tertiaryBlue,
+        primary: AppColors.primaryLime,
+        secondary: AppColors.secondaryLime,
+        tertiary: AppColors.tertiaryLime,
         surface: Colors.white,
         error: AppColors.error,
       ),
@@ -18,7 +18,7 @@ class AppTheme {
         elevation: 0,
         centerTitle: false,
         backgroundColor: Colors.transparent,
-        foregroundColor: AppColors.primaryBlue,
+        foregroundColor: AppColors.tertiaryLime,
       ),
       cardTheme: CardThemeData(
         elevation: 4,
@@ -40,9 +40,9 @@ class AppTheme {
       useMaterial3: true,
       brightness: Brightness.dark,
       colorScheme: const ColorScheme.dark(
-        primary: AppColors.secondaryBlue,
-        secondary: AppColors.primaryBlue,
-        tertiary: AppColors.tertiaryBlue,
+        primary: AppColors.primaryLime,
+        secondary: AppColors.secondaryLime,
+        tertiary: AppColors.tertiaryLime,
         surface: AppColors.darkSurface,
         error: Color(0xFFCF6679),
       ),
@@ -51,7 +51,7 @@ class AppTheme {
         elevation: 0,
         centerTitle: false,
         backgroundColor: Colors.transparent,
-        foregroundColor: AppColors.secondaryBlue,
+        foregroundColor: AppColors.primaryLime,
       ),
       cardTheme: CardThemeData(
         elevation: 6,
