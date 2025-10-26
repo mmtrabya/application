@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/utils/haptic_feedback.dart';
-import '../booking/book_ride_page.dart';
+import '../booking/rental_booking_page.dart';
 import '../rides/my_rides_page.dart';
 import '../profile/profile_page.dart';
 
@@ -18,7 +18,7 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     final List<Widget> pages = [
-      BookRidePage(onThemeToggle: widget.onThemeToggle),
+      RentalBookingPage(onThemeToggle: widget.onThemeToggle),
       const MyRidesPage(),
       ProfilePage(onThemeToggle: widget.onThemeToggle),
     ];
@@ -46,14 +46,14 @@ class _HomePageState extends State<HomePage> {
           },
           destinations: const [
             NavigationDestination(
-              icon: Icon(Icons.home_outlined),
-              selectedIcon: Icon(Icons.home),
-              label: 'Home',
+              icon: Icon(Icons.car_rental_outlined),
+              selectedIcon: Icon(Icons.car_rental),
+              label: 'Rent',
             ),
             NavigationDestination(
               icon: Icon(Icons.receipt_long_outlined),
               selectedIcon: Icon(Icons.receipt_long),
-              label: 'My Rides',
+              label: 'My Rentals',
             ),
             NavigationDestination(
               icon: Icon(Icons.person_outline),

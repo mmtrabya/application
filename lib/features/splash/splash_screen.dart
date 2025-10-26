@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../config/theme/app_colors.dart';
 import '../../config/constants.dart';
 import '../../core/utils/animations.dart';
 
@@ -36,7 +35,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.lightBackground,
+      backgroundColor: const Color(0xFF292929),
       body: Center(
         child: FadeTransition(
           opacity: _fadeAnimation,
@@ -48,45 +47,58 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                 Container(
                   padding: const EdgeInsets.all(32),
                   decoration: BoxDecoration(
-                    color: AppColors.primaryLime.withOpacity(0.2),
+                    gradient: RadialGradient(
+                      colors: [
+                        Colors.white.withOpacity(0.15),
+                        Colors.white.withOpacity(0.05),
+                      ],
+                    ),
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: AppColors.primaryLime.withOpacity(0.5),
-                        blurRadius: 25,
-                        spreadRadius: 5,
+                        color: Colors.white.withOpacity(0.1),
+                        blurRadius: 40,
+                        spreadRadius: 10,
                       ),
                     ],
                   ),
                   child: const Icon(
-                    Icons.directions_car,
+                    Icons.directions_car_rounded,
                     size: 100,
-                    color: AppColors.primaryLime,
-                  ),
-                ),
-                const SizedBox(height: 32),
-                const Text(
-                  AppConstants.appName,
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.primaryLime,
-                    letterSpacing: 1.2,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  AppConstants.appTagline,
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.black54,
+                    color: Colors.white,
                   ),
                 ),
                 const SizedBox(height: 48),
-                CircularProgressIndicator(
-                  strokeWidth: 3,
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    AppColors.primaryLime.withOpacity(0.9),
+                const Text(
+                  AppConstants.appName,
+                  style: TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                    letterSpacing: -0.5,
+                    fontFamily: 'Inter',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  AppConstants.appTagline,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w400,
+                    color: Colors.white.withOpacity(0.7),
+                    letterSpacing: 0.5,
+                    fontFamily: 'Inter',
+                  ),
+                ),
+                const SizedBox(height: 60),
+                SizedBox(
+                  width: 40,
+                  height: 40,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 3,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      Colors.white.withOpacity(0.8),
+                    ),
                   ),
                 ),
               ],

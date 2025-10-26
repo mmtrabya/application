@@ -11,14 +11,14 @@ void main() {
 
   // Validate API key configuration (optional - remove in production)
   if (!ApiConfig.isApiKeyConfigured) {
-    debugPrint('WARNING: Google Maps API key is not configured!');
-    debugPrint('Build with: flutter run --dart-define=GOOGLE_MAPS_API_KEY=your_key');
+    debugPrint('⚠️  WARNING: Google Maps API key is not configured!');
+    debugPrint('📝 Build with: flutter run --dart-define=GOOGLE_MAPS_API_KEY=your_key');
   }
 
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.dark,
+      statusBarIconBrightness: Brightness.light, // Changed to light for dark splash
     ),
   );
 
@@ -44,7 +44,9 @@ class _SmartCityTransportAppState extends State<SmartCityTransportApp> {
   }
 
   Future<void> _initApp() async {
+    // Show splash screen for 3 seconds
     await Future.delayed(const Duration(seconds: 3));
+
     if (mounted) {
       setState(() => _showSplash = false);
     }
@@ -52,7 +54,9 @@ class _SmartCityTransportAppState extends State<SmartCityTransportApp> {
 
   void _toggleTheme() {
     setState(() {
-      _themeMode = _themeMode == ThemeMode.light ? ThemeMode.dark : ThemeMode.light;
+      _themeMode = _themeMode == ThemeMode.light
+          ? ThemeMode.dark
+          : ThemeMode.light;
     });
   }
 
@@ -71,8 +75,16 @@ class _SmartCityTransportAppState extends State<SmartCityTransportApp> {
     return MaterialApp(
       title: 'Smart City Transport',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme(),
-      darkTheme: AppTheme.darkTheme(),
+      theme: AppTheme.lightTheme().copyWith(
+        textTheme: AppTheme.lightTheme().textTheme.apply(
+          fontFamily: 'Inter',
+        ),
+      ),
+      darkTheme: AppTheme.darkTheme().copyWith(
+        textTheme: AppTheme.darkTheme().textTheme.apply(
+          fontFamily: 'Inter',
+        ),
+      ),
       themeMode: _themeMode,
       home: _getInitialPage(),
       routes: {

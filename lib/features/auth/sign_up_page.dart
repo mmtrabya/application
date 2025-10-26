@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/widgets/gradient_container.dart';
 import 'terms_conditions_page.dart';
+import 'id_verification_page.dart';
 
 class SignUpPage extends StatefulWidget {
   const SignUpPage({Key? key}) : super(key: key);
@@ -42,11 +43,16 @@ class _SignUpPageState extends State<SignUpPage> {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
 
+      // Simulate API call
       await Future.delayed(const Duration(seconds: 2));
 
       if (mounted) {
         setState(() => _isLoading = false);
-        Navigator.pushReplacementNamed(context, '/home');
+        // Navigate to ID Verification instead of home
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const IDVerificationPage()),
+        );
       }
     }
   }
@@ -69,8 +75,22 @@ class _SignUpPageState extends State<SignUpPage> {
               ),
               const SizedBox(height: 32),
               const Text(
-                'Join Smart City Transport',
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+                'Join Smart City Rentals',
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'Inter',
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Rent autonomous vehicles anytime, anywhere',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[600],
+                  fontFamily: 'Inter',
+                ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 32),
@@ -200,7 +220,7 @@ class _SignUpPageState extends State<SignUpPage> {
                           width: 20,
                           child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
                         )
-                            : const Text('Sign Up', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                            : const Text('Sign Up', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, fontFamily: 'Inter')),
                       ),
                     ),
                   ],

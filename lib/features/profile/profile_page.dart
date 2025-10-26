@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../about/about_page.dart';
+import 'edit_profile_page.dart';
+import 'payment_cards_page.dart';
 
 class ProfilePage extends StatelessWidget {
   final VoidCallback onThemeToggle;
@@ -9,7 +11,10 @@ class ProfilePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Profile', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Profile',
+          style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Inter'),
+        ),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -34,14 +39,32 @@ class ProfilePage extends StatelessWidget {
                     child: Icon(Icons.person, size: 50, color: Theme.of(context).colorScheme.primary),
                   ),
                   const SizedBox(height: 16),
-                  const Text('John Doe', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                  const Text(
+                    'John Doe',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'Inter',
+                    ),
+                  ),
                   const SizedBox(height: 4),
-                  const Text('john.doe@email.com', style: TextStyle(fontSize: 14, color: Colors.grey)),
+                  const Text(
+                    'john.doe@email.com',
+                    style: TextStyle(fontSize: 14, color: Colors.grey, fontFamily: 'Inter'),
+                  ),
                   const SizedBox(height: 8),
-                  const Text('+1 (555) 123-4567', style: TextStyle(fontSize: 14, color: Colors.grey)),
+                  const Text(
+                    '+1 (555) 123-4567',
+                    style: TextStyle(fontSize: 14, color: Colors.grey, fontFamily: 'Inter'),
+                  ),
                   const SizedBox(height: 20),
                   ElevatedButton.icon(
-                    onPressed: () {},
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const EditProfilePage()),
+                      );
+                    },
                     icon: const Icon(Icons.edit),
                     label: const Text('Edit Profile'),
                     style: ElevatedButton.styleFrom(
@@ -55,9 +78,19 @@ class ProfilePage extends StatelessWidget {
           ),
           const SizedBox(height: 24),
           _buildSectionTitle('Account'),
-          _buildMenuItem(context, Icons.wallet, 'Payment Methods', () {}),
-          _buildMenuItem(context, Icons.history, 'Ride History', () {}),
-          _buildMenuItem(context, Icons.favorite, 'Saved Places', () {}),
+          _buildMenuItem(
+            context,
+            Icons.credit_card,
+            'Payment Methods',
+                () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const PaymentCardsPage()),
+              );
+            },
+          ),
+          _buildMenuItem(context, Icons.history, 'Rental History', () {}),
+          _buildMenuItem(context, Icons.favorite, 'Favorite Vehicles', () {}),
           const SizedBox(height: 24),
           _buildSectionTitle('Preferences'),
           _buildMenuItemWithSwitch(
@@ -89,13 +122,27 @@ class ProfilePage extends StatelessWidget {
             color: Colors.red.withValues(alpha: 0.1),
             child: ListTile(
               leading: const Icon(Icons.logout, color: Colors.red),
-              title: const Text('Logout', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+              title: const Text(
+                'Logout',
+                style: TextStyle(
+                  color: Colors.red,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'Inter',
+                ),
+              ),
               onTap: () {},
             ),
           ),
           const SizedBox(height: 32),
           Center(
-            child: Text('Smart City Transport v1.0.0', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+            child: Text(
+              'Smart City Transport v1.0.0',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[600],
+                fontFamily: 'Inter',
+              ),
+            ),
           ),
         ],
       ),
@@ -105,7 +152,15 @@ class ProfilePage extends StatelessWidget {
   Widget _buildSectionTitle(String title) {
     return Padding(
       padding: const EdgeInsets.only(left: 16, bottom: 8),
-      child: Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.grey)),
+      child: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+          color: Colors.grey,
+          fontFamily: 'Inter',
+        ),
+      ),
     );
   }
 
@@ -114,7 +169,7 @@ class ProfilePage extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
         leading: Icon(icon, color: Theme.of(context).colorScheme.primary),
-        title: Text(title),
+        title: Text(title, style: const TextStyle(fontFamily: 'Inter')),
         trailing: const Icon(Icons.chevron_right),
         onTap: onTap,
       ),
@@ -126,7 +181,7 @@ class ProfilePage extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
         leading: Icon(icon, color: Theme.of(context).colorScheme.primary),
-        title: Text(title),
+        title: Text(title, style: const TextStyle(fontFamily: 'Inter')),
         trailing: Switch(value: value, onChanged: onChanged),
       ),
     );
