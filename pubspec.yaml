@@ -25,6 +25,8 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/lottie/
 
   # To add custom fonts to your application, add a fonts section here
   # Download Inter font from https://fonts.google.com/specimen/Inter
