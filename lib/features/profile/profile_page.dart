@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../about/about_page.dart';
 
 class ProfilePage extends StatelessWidget {
   final VoidCallback onThemeToggle;
@@ -45,7 +46,7 @@ class ProfilePage extends StatelessWidget {
                     label: const Text('Edit Profile'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Theme.of(context).colorScheme.primary,
-                      foregroundColor: Colors.white,
+                      foregroundColor: Colors.black,
                     ),
                   ),
                 ],
@@ -71,7 +72,17 @@ class ProfilePage extends StatelessWidget {
           const SizedBox(height: 24),
           _buildSectionTitle('Support'),
           _buildMenuItem(context, Icons.help, 'Help Center', () {}),
-          _buildMenuItem(context, Icons.info, 'About', () {}),
+          _buildMenuItem(
+            context,
+            Icons.info,
+            'About',
+                () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const AboutPage()),
+              );
+            },
+          ),
           _buildMenuItem(context, Icons.privacy_tip, 'Privacy Policy', () {}),
           const SizedBox(height: 24),
           Card(

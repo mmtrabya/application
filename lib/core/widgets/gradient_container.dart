@@ -26,11 +26,11 @@ class GradientContainer extends StatelessWidget {
       height: height,
       padding: padding,
       decoration: BoxDecoration(
-        gradient: AppColors.blueGradient,
+        gradient: AppColors.limeGradient,
         borderRadius: borderRadius ?? BorderRadius.circular(20),
         boxShadow: boxShadow ?? [
           BoxShadow(
-            color: AppColors.primaryBlue.withOpacity(0.3),
+            color: AppColors.primaryLime.withOpacity(0.3),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
