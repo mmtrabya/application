@@ -1,4 +1,7 @@
+// lib/features/profile/edit_profile_page.dart
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../providers/user_provider.dart';
 
 class EditProfilePage extends StatefulWidget {
   const EditProfilePage({Key? key}) : super(key: key);
@@ -9,11 +12,21 @@ class EditProfilePage extends StatefulWidget {
 
 class _EditProfilePageState extends State<EditProfilePage> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController(text: 'John Doe');
-  final _emailController = TextEditingController(text: 'john.doe@email.com');
-  final _phoneController = TextEditingController(text: '+1 (555) 123-4567');
-  final _addressController = TextEditingController(text: '123 Main St, City');
+  late TextEditingController _nameController;
+  late TextEditingController _emailController;
+  late TextEditingController _phoneController;
+  late TextEditingController _addressController;
   bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final user = Provider.of<UserProvider>(context, listen: false).user;
+    _nameController = TextEditingController(text: user?.name ?? '');
+    _emailController = TextEditingController(text: user?.email ?? '');
+    _phoneController = TextEditingController(text: user?.phone ?? '');
+    _addressController = TextEditingController(text: user?.address ?? '');
+  }
 
   @override
   void dispose() {
@@ -28,16 +41,32 @@ class _EditProfilePageState extends State<EditProfilePage> {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
 
-      // Simulate API call
-      await Future.delayed(const Duration(seconds: 2));
+      try {
+        // Update user profile
+        await Provider.of<UserProvider>(context, listen: false).updateProfile(
+          name: _nameController.text.trim(),
+          email: _emailController.text.trim(),
+          phone: _phoneController.text.trim(),
+          address: _addressController.text.trim(),
+        );
 
-      if (mounted) {
+        if (mounted) {
+          setState(() => _isLoading = false);
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Profile updated successfully'),
+              backgroundColor: Colors.green,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      } catch (e) {
         setState(() => _isLoading = false);
-        Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Profile updated successfully'),
-            backgroundColor: Colors.green,
+          SnackBar(
+            content: Text('Error updating profile: $e'),
+            backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -46,11 +75,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
   }
 
   Future<void> _changeProfilePicture() async {
-    // In production, use image_picker package
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Profile picture updated'),
-        backgroundColor: Colors.green,
+        content: Text('Profile picture feature coming soon!'),
+        backgroundColor: Colors.blue,
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -72,7 +100,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
             key: _formKey,
             child: Column(
               children: [
-                // Profile Picture
                 Stack(
                   children: [
                     Container(
@@ -119,7 +146,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                           ),
                           child: const Icon(
                             Icons.camera_alt,
-                            color: Colors.white,
+                            color: Colors.black,
                             size: 20,
                           ),
                         ),
@@ -128,8 +155,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   ],
                 ),
                 const SizedBox(height: 40),
-
-                // Full Name
                 TextFormField(
                   controller: _nameController,
                   decoration: InputDecoration(
@@ -150,8 +175,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   },
                 ),
                 const SizedBox(height: 16),
-
-                // Email
                 TextFormField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
@@ -176,8 +199,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   },
                 ),
                 const SizedBox(height: 16),
-
-                // Phone
                 TextFormField(
                   controller: _phoneController,
                   keyboardType: TextInputType.phone,
@@ -199,8 +220,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   },
                 ),
                 const SizedBox(height: 16),
-
-                // Address
                 TextFormField(
                   controller: _addressController,
                   maxLines: 2,
@@ -214,16 +233,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       borderRadius: BorderRadius.circular(16),
                     ),
                   ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your address';
-                    }
-                    return null;
-                  },
                 ),
                 const SizedBox(height: 32),
-
-                // Save Button
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -256,11 +267,14 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   ),
                 ),
                 const SizedBox(height: 16),
-
-                // Change Password Button
                 TextButton(
                   onPressed: () {
-                    // Navigate to change password page
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Change password feature coming soon!'),
+                        backgroundColor: Colors.blue,
+                      ),
+                    );
                   },
                   child: Text(
                     'Change Password',

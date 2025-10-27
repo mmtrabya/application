@@ -1,5 +1,8 @@
+// lib/features/auth/sign_up_page.dart
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../core/widgets/gradient_container.dart';
+import '../../providers/user_provider.dart';
 import 'terms_conditions_page.dart';
 import 'id_verification_page.dart';
 
@@ -35,7 +38,11 @@ class _SignUpPageState extends State<SignUpPage> {
   Future<void> _signUp() async {
     if (!_acceptedTerms) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please accept the Terms & Conditions')),
+        const SnackBar(
+          content: Text('Please accept the Terms & Conditions'),
+          backgroundColor: Colors.orange,
+          behavior: SnackBarBehavior.floating,
+        ),
       );
       return;
     }
@@ -43,15 +50,41 @@ class _SignUpPageState extends State<SignUpPage> {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
 
-      // Simulate API call
-      await Future.delayed(const Duration(seconds: 2));
+      try {
+        // Save user data to provider
+        await Provider.of<UserProvider>(context, listen: false).signUp(
+          name: _nameController.text.trim(),
+          email: _emailController.text.trim(),
+          phone: _phoneController.text.trim(),
+          password: _passwordController.text,
+        );
 
-      if (mounted) {
+        if (mounted) {
+          setState(() => _isLoading = false);
+
+          // Show success message
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Welcome, ${_nameController.text}!'),
+              backgroundColor: Colors.green,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+
+          // Navigate to ID Verification
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const IDVerificationPage()),
+          );
+        }
+      } catch (e) {
         setState(() => _isLoading = false);
-        // Navigate to ID Verification instead of home
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const IDVerificationPage()),
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
         );
       }
     }
@@ -75,7 +108,7 @@ class _SignUpPageState extends State<SignUpPage> {
               ),
               const SizedBox(height: 32),
               const Text(
-                'Join Smart City Rentals',
+                'Join Smart City Transport',
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
@@ -100,12 +133,21 @@ class _SignUpPageState extends State<SignUpPage> {
                   children: [
                     TextFormField(
                       controller: _nameController,
+                      textCapitalization: TextCapitalization.words,
                       decoration: InputDecoration(
                         labelText: 'Full Name',
                         prefixIcon: Icon(Icons.person_outlined, color: Theme.of(context).colorScheme.primary),
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
                       ),
-                      validator: (value) => value == null || value.isEmpty ? 'Please enter your name' : null,
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Please enter your name';
+                        }
+                        if (value.trim().length < 2) {
+                          return 'Name must be at least 2 characters';
+                        }
+                        return null;
+                      },
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
@@ -118,7 +160,9 @@ class _SignUpPageState extends State<SignUpPage> {
                       ),
                       validator: (value) {
                         if (value == null || value.isEmpty) return 'Please enter your email';
-                        if (!value.contains('@')) return 'Please enter a valid email';
+                        if (!value.contains('@') || !value.contains('.')) {
+                          return 'Please enter a valid email';
+                        }
                         return null;
                       },
                     ),
@@ -131,7 +175,15 @@ class _SignUpPageState extends State<SignUpPage> {
                         prefixIcon: Icon(Icons.phone_outlined, color: Theme.of(context).colorScheme.primary),
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
                       ),
-                      validator: (value) => value == null || value.isEmpty ? 'Please enter your phone number' : null,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter your phone number';
+                        }
+                        if (value.length < 10) {
+                          return 'Please enter a valid phone number';
+                        }
+                        return null;
+                      },
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
@@ -220,7 +272,10 @@ class _SignUpPageState extends State<SignUpPage> {
                           width: 20,
                           child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
                         )
-                            : const Text('Sign Up', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, fontFamily: 'Inter')),
+                            : const Text(
+                          'Sign Up',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, fontFamily: 'Inter'),
+                        ),
                       ),
                     ),
                   ],

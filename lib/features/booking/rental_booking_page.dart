@@ -1,9 +1,10 @@
+// lib/features/booking/rental_booking_page.dart
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+// Remove lottie import to avoid Marker conflict
 import '../../config/constants.dart';
 import '../../core/utils/haptic_feedback.dart';
-import '../../core/utils/animations.dart';
 
 class RentalBookingPage extends StatefulWidget {
   final VoidCallback onThemeToggle;
@@ -16,47 +17,62 @@ class RentalBookingPage extends StatefulWidget {
 class _RentalBookingPageState extends State<RentalBookingPage>
     with TickerProviderStateMixin {
   GoogleMapController? _mapController;
-  final LatLng _currentLocation = const LatLng(30.0444, 31.2357); // Cairo, Egypt
+  final LatLng _currentLocation = const LatLng(30.0444, 31.2357);
   final Set<Marker> _markers = {};
   String? _selectedCarId;
   bool _isRenting = false;
 
-  // Rental tracking
   DateTime? _rentalStartTime;
   double _distanceTraveled = 0.0;
   Timer? _rentalTimer;
 
-  // Pricing (per hour and per km)
   static const double pricePerHour = 15.0;
   static const double pricePerKm = 0.5;
 
-  final List<NearbyVehicle> _nearbyVehicles = [
-    NearbyVehicle(
-      id: 'CAR001',
-      name: 'Tesla Model 3',
-      type: 'Electric',
+  final List<AutonomousVehicle> _nearbyVehicles = [
+    AutonomousVehicle(
+      id: 'AV001',
+      model: 'City Cruiser',
+      category: 'Compact',
       distance: 0.3,
       location: const LatLng(30.0454, 31.2367),
-      pricePerHour: 20.0,
+      pricePerHour: 15.0,
       batteryLevel: 85,
+      seats: 4,
+      color: 'Pearl White',
     ),
-    NearbyVehicle(
-      id: 'CAR002',
-      name: 'BMW i4',
-      type: 'Electric',
+    AutonomousVehicle(
+      id: 'AV002',
+      model: 'Urban Elite',
+      category: 'Premium',
       distance: 0.5,
       location: const LatLng(30.0434, 31.2347),
       pricePerHour: 25.0,
       batteryLevel: 92,
+      seats: 5,
+      color: 'Midnight Blue',
     ),
-    NearbyVehicle(
-      id: 'CAR003',
-      name: 'Nissan Leaf',
-      type: 'Electric',
+    AutonomousVehicle(
+      id: 'AV003',
+      model: 'Eco Glide',
+      category: 'Economy',
       distance: 0.8,
       location: const LatLng(30.0464, 31.2377),
-      pricePerHour: 15.0,
+      pricePerHour: 12.0,
       batteryLevel: 78,
+      seats: 4,
+      color: 'Lime Green',
+    ),
+    AutonomousVehicle(
+      id: 'AV004',
+      model: 'Executive Pro',
+      category: 'Luxury',
+      distance: 1.2,
+      location: const LatLng(30.0424, 31.2387),
+      pricePerHour: 35.0,
+      batteryLevel: 95,
+      seats: 6,
+      color: 'Carbon Black',
     ),
   ];
 
@@ -67,7 +83,6 @@ class _RentalBookingPageState extends State<RentalBookingPage>
   }
 
   void _initializeMap() {
-    // Add user location marker
     _markers.add(
       Marker(
         markerId: const MarkerId('user'),
@@ -77,7 +92,6 @@ class _RentalBookingPageState extends State<RentalBookingPage>
       ),
     );
 
-    // Add nearby vehicles markers
     for (var vehicle in _nearbyVehicles) {
       _markers.add(
         Marker(
@@ -85,8 +99,8 @@ class _RentalBookingPageState extends State<RentalBookingPage>
           position: vehicle.location,
           icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
           infoWindow: InfoWindow(
-            title: vehicle.name,
-            snippet: '${vehicle.distance} km away • \$${vehicle.pricePerHour}/hr',
+            title: vehicle.model,
+            snippet: '${vehicle.distance} km • \$${vehicle.pricePerHour}/hr',
           ),
           onTap: () => _selectVehicle(vehicle.id),
         ),
@@ -126,19 +140,17 @@ class _RentalBookingPageState extends State<RentalBookingPage>
       _distanceTraveled = 0.0;
     });
 
-    // Start tracking rental
     _rentalTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
       if (mounted && _isRenting) {
         setState(() {
-          // Simulate distance traveled (in production, use actual GPS)
-          _distanceTraveled += 0.2; // 0.2 km every 10 seconds
+          _distanceTraveled += 0.2;
         });
       }
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Rental started! Enjoy your ride'),
+        content: Text('🚗 Rental started! Enjoy your autonomous ride'),
         backgroundColor: Colors.green,
         behavior: SnackBarBehavior.floating,
       ),
@@ -158,25 +170,46 @@ class _RentalBookingPageState extends State<RentalBookingPage>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Rental Summary'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Icon(Icons.receipt_long, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(width: 12),
+            const Text('Rental Summary'),
+          ],
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Duration: ${duration.inMinutes} minutes'),
-            Text('Distance: ${_distanceTraveled.toStringAsFixed(2)} km'),
-            const Divider(),
-            Text(
-              'Total Cost: \$${totalCost.toStringAsFixed(2)}',
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
+            _buildSummaryRow('Duration', '${duration.inMinutes} minutes'),
+            _buildSummaryRow('Distance', '${_distanceTraveled.toStringAsFixed(2)} km'),
+            const Divider(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Total Cost',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  '\$${totalCost.toStringAsFixed(2)}',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+              ],
             ),
           ],
         ),
         actions: [
           TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
               setState(() {
@@ -185,9 +218,32 @@ class _RentalBookingPageState extends State<RentalBookingPage>
                 _rentalStartTime = null;
                 _distanceTraveled = 0.0;
               });
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Payment completed successfully!'),
+                  backgroundColor: Colors.green,
+                ),
+              );
             },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              foregroundColor: Colors.black,
+            ),
             child: const Text('Complete Payment'),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSummaryRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(fontSize: 16)),
+          Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
         ],
       ),
     );
@@ -198,7 +254,7 @@ class _RentalBookingPageState extends State<RentalBookingPage>
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'Rent a Vehicle',
+          'Rent Autonomous Vehicle',
           style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Inter'),
         ),
         actions: [
@@ -214,7 +270,6 @@ class _RentalBookingPageState extends State<RentalBookingPage>
       ),
       body: Stack(
         children: [
-          // Map
           GoogleMap(
             initialCameraPosition: CameraPosition(
               target: _currentLocation,
@@ -228,11 +283,7 @@ class _RentalBookingPageState extends State<RentalBookingPage>
             onMapCreated: (controller) => _mapController = controller,
             onTap: (_) => setState(() => _selectedCarId = null),
           ),
-
-          // Rental Status Overlay (when renting)
           if (_isRenting) _buildRentalStatus(),
-
-          // Bottom Sheet
           if (!_isRenting) _buildBottomSheet(),
         ],
       ),
@@ -273,7 +324,7 @@ class _RentalBookingPageState extends State<RentalBookingPage>
             const Text(
               'RENTAL IN PROGRESS',
               style: TextStyle(
-                color: Colors.white,
+                color: Colors.black,
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
                 letterSpacing: 2,
@@ -284,21 +335,9 @@ class _RentalBookingPageState extends State<RentalBookingPage>
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildStatusItem(
-                  '${duration.inMinutes}',
-                  'Minutes',
-                  Icons.access_time,
-                ),
-                _buildStatusItem(
-                  _distanceTraveled.toStringAsFixed(1),
-                  'KM',
-                  Icons.route,
-                ),
-                _buildStatusItem(
-                  '\$${currentCost.toStringAsFixed(2)}',
-                  'Cost',
-                  Icons.attach_money,
-                ),
+                _buildStatusItem('${duration.inMinutes}', 'Minutes', Icons.access_time),
+                _buildStatusItem(_distanceTraveled.toStringAsFixed(1), 'KM', Icons.route),
+                _buildStatusItem('\$${currentCost.toStringAsFixed(2)}', 'Cost', Icons.attach_money),
               ],
             ),
             const SizedBox(height: 16),
@@ -309,10 +348,7 @@ class _RentalBookingPageState extends State<RentalBookingPage>
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 32,
-                  vertical: 12,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
               ),
             ),
           ],
@@ -324,12 +360,12 @@ class _RentalBookingPageState extends State<RentalBookingPage>
   Widget _buildStatusItem(String value, String label, IconData icon) {
     return Column(
       children: [
-        Icon(icon, color: Colors.white, size: 24),
+        Icon(icon, color: Colors.black, size: 24),
         const SizedBox(height: 8),
         Text(
           value,
           style: const TextStyle(
-            color: Colors.white,
+            color: Colors.black,
             fontSize: 20,
             fontWeight: FontWeight.bold,
             fontFamily: 'Inter',
@@ -337,8 +373,8 @@ class _RentalBookingPageState extends State<RentalBookingPage>
         ),
         Text(
           label,
-          style: TextStyle(
-            color: Colors.white.withOpacity(0.8),
+          style: const TextStyle(
+            color: Colors.black87,
             fontSize: 12,
             fontFamily: 'Inter',
           ),
@@ -356,9 +392,7 @@ class _RentalBookingPageState extends State<RentalBookingPage>
         return Container(
           decoration: BoxDecoration(
             color: Theme.of(context).scaffoldBackgroundColor,
-            borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(30),
-            ),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.2),
@@ -399,14 +433,13 @@ class _RentalBookingPageState extends State<RentalBookingPage>
     );
   }
 
-  Widget _buildVehicleCard(NearbyVehicle vehicle) {
+  Widget _buildVehicleCard(AutonomousVehicle vehicle) {
     final isSelected = _selectedCarId == vehicle.id;
 
     return GestureDetector(
       onTap: () {
         AppHaptics.selection();
         _selectVehicle(vehicle.id);
-        // Move camera to vehicle location
         _mapController?.animateCamera(
           CameraUpdate.newLatLng(vehicle.location),
         );
@@ -426,9 +459,7 @@ class _RentalBookingPageState extends State<RentalBookingPage>
           color: isSelected ? null : Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isSelected
-                ? Theme.of(context).colorScheme.primary
-                : Colors.transparent,
+            color: isSelected ? Theme.of(context).colorScheme.primary : Colors.transparent,
             width: 2,
           ),
           boxShadow: [
@@ -457,7 +488,7 @@ class _RentalBookingPageState extends State<RentalBookingPage>
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
-                    Icons.electric_car,
+                    Icons.electric_car_rounded,
                     size: 32,
                     color: Theme.of(context).colorScheme.primary,
                   ),
@@ -468,7 +499,7 @@ class _RentalBookingPageState extends State<RentalBookingPage>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        vehicle.name,
+                        vehicle.model,
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -478,19 +509,28 @@ class _RentalBookingPageState extends State<RentalBookingPage>
                       const SizedBox(height: 4),
                       Row(
                         children: [
-                          Icon(
-                            Icons.location_on,
-                            size: 16,
-                            color: Colors.grey[600],
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              vehicle.category,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).colorScheme.primary,
+                                fontFamily: 'Inter',
+                              ),
+                            ),
                           ),
+                          const SizedBox(width: 8),
+                          Icon(Icons.location_on, size: 14, color: Colors.grey[600]),
                           const SizedBox(width: 4),
                           Text(
-                            '${vehicle.distance} km away',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey[600],
-                              fontFamily: 'Inter',
-                            ),
+                            '${vehicle.distance} km',
+                            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                           ),
                         ],
                       ),
@@ -511,11 +551,7 @@ class _RentalBookingPageState extends State<RentalBookingPage>
                     ),
                     const Text(
                       'per hour',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey,
-                        fontFamily: 'Inter',
-                      ),
+                      style: TextStyle(fontSize: 12, color: Colors.grey, fontFamily: 'Inter'),
                     ),
                   ],
                 ),
@@ -524,30 +560,21 @@ class _RentalBookingPageState extends State<RentalBookingPage>
             const SizedBox(height: 12),
             Row(
               children: [
-                _buildVehicleInfo(
-                  Icons.battery_charging_full,
-                  '${vehicle.batteryLevel}%',
-                  Colors.green,
-                ),
+                _buildVehicleInfo(Icons.battery_charging_full, '${vehicle.batteryLevel}%', Colors.green),
                 const SizedBox(width: 16),
-                _buildVehicleInfo(
-                  Icons.bolt,
-                  vehicle.type,
-                  Colors.blue,
-                ),
+                _buildVehicleInfo(Icons.airline_seat_recline_normal, '${vehicle.seats} seats', Colors.blue),
+                const SizedBox(width: 16),
+                _buildVehicleInfo(Icons.palette, vehicle.color, Colors.purple),
                 const Spacer(),
                 if (isSelected)
                   ElevatedButton.icon(
                     onPressed: _startRental,
                     icon: const Icon(Icons.key, size: 18),
-                    label: const Text('Start Rental'),
+                    label: const Text('Start'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Theme.of(context).colorScheme.primary,
                       foregroundColor: Colors.black,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 10,
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                     ),
                   ),
               ],
@@ -563,35 +590,32 @@ class _RentalBookingPageState extends State<RentalBookingPage>
       children: [
         Icon(icon, size: 16, color: color),
         const SizedBox(width: 4),
-        Text(
-          text,
-          style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-            fontFamily: 'Inter',
-          ),
-        ),
+        Text(text, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, fontFamily: 'Inter')),
       ],
     );
   }
 }
 
-class NearbyVehicle {
+class AutonomousVehicle {
   final String id;
-  final String name;
-  final String type;
+  final String model;
+  final String category;
   final double distance;
   final LatLng location;
   final double pricePerHour;
   final int batteryLevel;
+  final int seats;
+  final String color;
 
-  NearbyVehicle({
+  AutonomousVehicle({
     required this.id,
-    required this.name,
-    required this.type,
+    required this.model,
+    required this.category,
     required this.distance,
     required this.location,
     required this.pricePerHour,
     required this.batteryLevel,
+    required this.seats,
+    required this.color,
   });
 }

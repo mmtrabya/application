@@ -1,6 +1,11 @@
+// lib/features/auth/id_verification_page.dart
 import 'package:flutter/material.dart';
+import 'package:camera/camera.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:provider/provider.dart';
 import 'dart:io';
 import '../../core/widgets/gradient_container.dart';
+import '../../providers/user_provider.dart';
 
 class IDVerificationPage extends StatefulWidget {
   const IDVerificationPage({Key? key}) : super(key: key);
@@ -10,37 +15,94 @@ class IDVerificationPage extends StatefulWidget {
 }
 
 class _IDVerificationPageState extends State<IDVerificationPage> {
-  String? _nationalIdPath;
-  String? _drivingLicensePath;
+  XFile? _nationalIdFront;
+  XFile? _nationalIdBack;
+  XFile? _drivingLicense;
   bool _isLoading = false;
   final _nationalIdController = TextEditingController();
+  CameraController? _cameraController;
+  List<CameraDescription>? _cameras;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeCamera();
+  }
+
+  Future<void> _initializeCamera() async {
+    _cameras = await availableCameras();
+  }
 
   @override
   void dispose() {
     _nationalIdController.dispose();
+    _cameraController?.dispose();
     super.dispose();
   }
 
-  Future<void> _pickImage(String type) async {
-    // In production, use image_picker package
-    // For now, simulate image selection
-    await Future.delayed(const Duration(milliseconds: 500));
+  Future<void> _requestCameraPermission() async {
+    final status = await Permission.camera.request();
+    if (status.isDenied) {
+      _showError('Camera permission is required to capture ID photos');
+    }
+  }
 
-    setState(() {
-      if (type == 'national_id') {
-        _nationalIdPath = 'simulated_national_id.jpg';
-      } else {
-        _drivingLicensePath = 'simulated_license.jpg';
-      }
-    });
+  Future<void> _capturePhoto(String type) async {
+    await _requestCameraPermission();
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('$type uploaded successfully'),
-        backgroundColor: Colors.green,
-        behavior: SnackBarBehavior.floating,
+    if (_cameras == null || _cameras!.isEmpty) {
+      _showError('No camera found on device');
+      return;
+    }
+
+    if (!mounted) return;
+
+    final result = await Navigator.push<XFile>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CameraCapturePage(
+          camera: _cameras!.first,
+          captureType: type,
+        ),
       ),
     );
+
+    if (result != null) {
+      setState(() {
+        switch (type) {
+          case 'national_id_front':
+            _nationalIdFront = result;
+            break;
+          case 'national_id_back':
+            _nationalIdBack = result;
+            break;
+          case 'driving_license':
+            _drivingLicense = result;
+            break;
+        }
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${_getTypeLabel(type)} captured successfully'),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  String _getTypeLabel(String type) {
+    switch (type) {
+      case 'national_id_front':
+        return 'National ID (Front)';
+      case 'national_id_back':
+        return 'National ID (Back)';
+      case 'driving_license':
+        return 'Driving License';
+      default:
+        return 'Document';
+    }
   }
 
   Future<void> _submitVerification() async {
@@ -49,22 +111,31 @@ class _IDVerificationPageState extends State<IDVerificationPage> {
       return;
     }
 
-    if (_nationalIdPath == null) {
-      _showError('Please upload your National ID photo');
+    if (_nationalIdFront == null) {
+      _showError('Please capture National ID front photo');
       return;
     }
 
-    if (_drivingLicensePath == null) {
-      _showError('Please upload your Driving License photo');
+    if (_nationalIdBack == null) {
+      _showError('Please capture National ID back photo');
+      return;
+    }
+
+    if (_drivingLicense == null) {
+      _showError('Please capture Driving License photo');
       return;
     }
 
     setState(() => _isLoading = true);
 
-    // Simulate API call
+    // Simulate API call for verification
     await Future.delayed(const Duration(seconds: 2));
 
     if (mounted) {
+      // Save to user provider
+      await Provider.of<UserProvider>(context, listen: false)
+          .completeVerification(_nationalIdController.text);
+
       setState(() => _isLoading = false);
       Navigator.pushReplacementNamed(context, '/home');
     }
@@ -142,23 +213,36 @@ class _IDVerificationPageState extends State<IDVerificationPage> {
               ),
               const SizedBox(height: 24),
 
-              // National ID Photo Upload
-              _buildUploadCard(
-                title: 'National ID Photo',
-                subtitle: 'Upload a clear photo of your National ID',
+              // National ID Front
+              _buildCaptureCard(
+                title: 'National ID (Front)',
+                subtitle: 'Capture front side of your National ID',
                 icon: Icons.credit_card,
-                isUploaded: _nationalIdPath != null,
-                onTap: () => _pickImage('national_id'),
+                isCaptured: _nationalIdFront != null,
+                imagePath: _nationalIdFront?.path,
+                onTap: () => _capturePhoto('national_id_front'),
               ),
               const SizedBox(height: 16),
 
-              // Driving License Photo Upload
-              _buildUploadCard(
-                title: 'Driving License Photo',
-                subtitle: 'Upload a clear photo of your Driving License',
+              // National ID Back
+              _buildCaptureCard(
+                title: 'National ID (Back)',
+                subtitle: 'Capture back side of your National ID',
+                icon: Icons.credit_card,
+                isCaptured: _nationalIdBack != null,
+                imagePath: _nationalIdBack?.path,
+                onTap: () => _capturePhoto('national_id_back'),
+              ),
+              const SizedBox(height: 16),
+
+              // Driving License
+              _buildCaptureCard(
+                title: 'Driving License',
+                subtitle: 'Capture your Driving License',
                 icon: Icons.car_rental,
-                isUploaded: _drivingLicensePath != null,
-                onTap: () => _pickImage('driving_license'),
+                isCaptured: _drivingLicense != null,
+                imagePath: _drivingLicense?.path,
+                onTap: () => _capturePhoto('driving_license'),
               ),
               const SizedBox(height: 32),
 
@@ -232,11 +316,12 @@ class _IDVerificationPageState extends State<IDVerificationPage> {
     );
   }
 
-  Widget _buildUploadCard({
+  Widget _buildCaptureCard({
     required String title,
     required String subtitle,
     required IconData icon,
-    required bool isUploaded,
+    required bool isCaptured,
+    String? imagePath,
     required VoidCallback onTap,
   }) {
     return GestureDetector(
@@ -247,7 +332,7 @@ class _IDVerificationPageState extends State<IDVerificationPage> {
           color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isUploaded
+            color: isCaptured
                 ? Theme.of(context).colorScheme.primary
                 : Colors.grey.withOpacity(0.3),
             width: 2,
@@ -260,59 +345,171 @@ class _IDVerificationPageState extends State<IDVerificationPage> {
             ),
           ],
         ),
-        child: Row(
+        child: Column(
           children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Theme.of(context).colorScheme.primary.withOpacity(0.2),
-                    Theme.of(context).colorScheme.secondary.withOpacity(0.1),
-                  ],
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Theme.of(context).colorScheme.primary.withOpacity(0.2),
+                        Theme.of(context).colorScheme.secondary.withOpacity(0.1),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    icon,
+                    size: 32,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
                 ),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                icon,
-                size: 32,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      fontFamily: 'Inter',
-                    ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'Inter',
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        subtitle,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                          fontFamily: 'Inter',
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey,
-                      fontFamily: 'Inter',
-                    ),
-                  ),
-                ],
+                ),
+                Icon(
+                  isCaptured ? Icons.check_circle : Icons.camera_alt,
+                  color: isCaptured
+                      ? Colors.green
+                      : Theme.of(context).colorScheme.primary,
+                  size: 28,
+                ),
+              ],
+            ),
+            if (isCaptured && imagePath != null) ...[
+              const SizedBox(height: 12),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.file(
+                  File(imagePath),
+                  height: 120,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                ),
               ),
-            ),
-            Icon(
-              isUploaded ? Icons.check_circle : Icons.upload_file,
-              color: isUploaded
-                  ? Colors.green
-                  : Theme.of(context).colorScheme.primary,
-              size: 28,
-            ),
+            ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+// Camera Capture Page
+class CameraCapturePage extends StatefulWidget {
+  final CameraDescription camera;
+  final String captureType;
+
+  const CameraCapturePage({
+    Key? key,
+    required this.camera,
+    required this.captureType,
+  }) : super(key: key);
+
+  @override
+  State<CameraCapturePage> createState() => _CameraCapturePageState();
+}
+
+class _CameraCapturePageState extends State<CameraCapturePage> {
+  late CameraController _controller;
+  late Future<void> _initializeControllerFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = CameraController(
+      widget.camera,
+      ResolutionPreset.high,
+    );
+    _initializeControllerFuture = _controller.initialize();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _takePicture() async {
+    try {
+      await _initializeControllerFuture;
+      final image = await _controller.takePicture();
+
+      if (!mounted) return;
+      Navigator.pop(context, image);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error capturing photo: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        title: Text('Capture ${widget.captureType.replaceAll('_', ' ')}'),
+        backgroundColor: Colors.black,
+      ),
+      body: FutureBuilder<void>(
+        future: _initializeControllerFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.done) {
+            return Stack(
+              children: [
+                Center(
+                  child: CameraPreview(_controller),
+                ),
+                Positioned(
+                  bottom: 32,
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: FloatingActionButton.large(
+                      onPressed: _takePicture,
+                      backgroundColor: const Color(0xFFD6FF3F),
+                      child: const Icon(
+                        Icons.camera_alt,
+                        size: 36,
+                        color: Colors.black,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          } else {
+            return const Center(child: CircularProgressIndicator());
+          }
+        },
       ),
     );
   }

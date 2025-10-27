@@ -1,4 +1,7 @@
+// lib/features/profile/profile_page.dart
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../providers/user_provider.dart';
 import '../about/about_page.dart';
 import 'edit_profile_page.dart';
 import 'payment_cards_page.dart';
@@ -9,6 +12,9 @@ class ProfilePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final userProvider = Provider.of<UserProvider>(context);
+    final user = userProvider.user;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -30,8 +36,8 @@ class ProfilePage extends StatelessWidget {
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
-                          Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
-                          Theme.of(context).colorScheme.secondary.withValues(alpha: 0.1),
+                          Theme.of(context).colorScheme.primary.withOpacity(0.2),
+                          Theme.of(context).colorScheme.secondary.withOpacity(0.1),
                         ],
                       ),
                       shape: BoxShape.circle,
@@ -39,24 +45,67 @@ class ProfilePage extends StatelessWidget {
                     child: Icon(Icons.person, size: 50, color: Theme.of(context).colorScheme.primary),
                   ),
                   const SizedBox(height: 16),
-                  const Text(
-                    'John Doe',
-                    style: TextStyle(
+                  Text(
+                    user?.name ?? 'Guest User',
+                    style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                       fontFamily: 'Inter',
                     ),
                   ),
                   const SizedBox(height: 4),
-                  const Text(
-                    'john.doe@email.com',
-                    style: TextStyle(fontSize: 14, color: Colors.grey, fontFamily: 'Inter'),
+                  Text(
+                    user?.email ?? 'No email',
+                    style: const TextStyle(fontSize: 14, color: Colors.grey, fontFamily: 'Inter'),
                   ),
                   const SizedBox(height: 8),
-                  const Text(
-                    '+1 (555) 123-4567',
-                    style: TextStyle(fontSize: 14, color: Colors.grey, fontFamily: 'Inter'),
+                  Text(
+                    user?.phone ?? 'No phone',
+                    style: const TextStyle(fontSize: 14, color: Colors.grey, fontFamily: 'Inter'),
                   ),
+                  if (user?.address != null && user!.address.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.location_on, size: 16, color: Colors.grey),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            user.address,
+                            style: const TextStyle(fontSize: 14, color: Colors.grey, fontFamily: 'Inter'),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                  if (user?.isVerified == true) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.green),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.verified, color: Colors.green, size: 16),
+                          SizedBox(width: 8),
+                          Text(
+                            'Verified',
+                            style: TextStyle(
+                              color: Colors.green,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'Inter',
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 20),
                   ElevatedButton.icon(
                     onPressed: () {
@@ -119,7 +168,7 @@ class ProfilePage extends StatelessWidget {
           _buildMenuItem(context, Icons.privacy_tip, 'Privacy Policy', () {}),
           const SizedBox(height: 24),
           Card(
-            color: Colors.red.withValues(alpha: 0.1),
+            color: Colors.red.withOpacity(0.1),
             child: ListTile(
               leading: const Icon(Icons.logout, color: Colors.red),
               title: const Text(
@@ -130,7 +179,32 @@ class ProfilePage extends StatelessWidget {
                   fontFamily: 'Inter',
                 ),
               ),
-              onTap: () {},
+              onTap: () async {
+                final confirm = await showDialog<bool>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Logout'),
+                    content: const Text('Are you sure you want to logout?'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        child: const Text('Cancel'),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, true),
+                        child: const Text('Logout', style: TextStyle(color: Colors.red)),
+                      ),
+                    ],
+                  ),
+                );
+
+                if (confirm == true && context.mounted) {
+                  await Provider.of<UserProvider>(context, listen: false).logout();
+                  if (context.mounted) {
+                    Navigator.pushReplacementNamed(context, '/signin');
+                  }
+                }
+              },
             ),
           ),
           const SizedBox(height: 32),

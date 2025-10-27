@@ -1,7 +1,10 @@
+// lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import 'config/theme/app_theme.dart';
 import 'config/api_config.dart';
+import 'providers/user_provider.dart';
 import 'features/splash/splash_screen.dart';
 import 'features/auth/sign_in_page.dart';
 import 'features/home/home_page.dart';
@@ -9,20 +12,24 @@ import 'features/home/home_page.dart';
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Validate API key configuration (optional - remove in production)
   if (!ApiConfig.isApiKeyConfigured) {
     debugPrint('⚠️  WARNING: Google Maps API key is not configured!');
-    debugPrint('📝 Build with: flutter run --dart-define=GOOGLE_MAPS_API_KEY=your_key');
+    debugPrint('📝 Add your key to lib/config/api_config.dart');
   }
 
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light, // Changed to light for dark splash
+      statusBarIconBrightness: Brightness.light,
     ),
   );
 
-  runApp(const SmartCityTransportApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => UserProvider(),
+      child: const SmartCityTransportApp(),
+    ),
+  );
 }
 
 class SmartCityTransportApp extends StatefulWidget {
@@ -35,7 +42,7 @@ class SmartCityTransportApp extends StatefulWidget {
 class _SmartCityTransportAppState extends State<SmartCityTransportApp> {
   ThemeMode _themeMode = ThemeMode.light;
   bool _showSplash = true;
-  bool _isAuthenticated = false; // Set to false to show sign-in first
+  bool _isInitialized = false;
 
   @override
   void initState() {
@@ -44,11 +51,17 @@ class _SmartCityTransportAppState extends State<SmartCityTransportApp> {
   }
 
   Future<void> _initApp() async {
+    // Load user data from SharedPreferences
+    await Provider.of<UserProvider>(context, listen: false).loadUser();
+
     // Show splash screen for 3 seconds
     await Future.delayed(const Duration(seconds: 3));
 
     if (mounted) {
-      setState(() => _showSplash = false);
+      setState(() {
+        _showSplash = false;
+        _isInitialized = true;
+      });
     }
   }
 
@@ -58,16 +71,6 @@ class _SmartCityTransportAppState extends State<SmartCityTransportApp> {
           ? ThemeMode.dark
           : ThemeMode.light;
     });
-  }
-
-  Widget _getInitialPage() {
-    if (_showSplash) {
-      return const SplashScreen();
-    }
-    if (!_isAuthenticated) {
-      return const SignInPage();
-    }
-    return HomePage(onThemeToggle: _toggleTheme);
   }
 
   @override
@@ -86,7 +89,21 @@ class _SmartCityTransportAppState extends State<SmartCityTransportApp> {
         ),
       ),
       themeMode: _themeMode,
-      home: _getInitialPage(),
+      home: _showSplash
+          ? const SplashScreen()
+          : Consumer<UserProvider>(
+        builder: (context, userProvider, _) {
+          if (!_isInitialized) {
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            );
+          }
+
+          return userProvider.isAuthenticated
+              ? HomePage(onThemeToggle: _toggleTheme)
+              : const SignInPage();
+        },
+      ),
       routes: {
         '/home': (context) => HomePage(onThemeToggle: _toggleTheme),
         '/signin': (context) => const SignInPage(),
