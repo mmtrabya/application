@@ -128,16 +128,32 @@ class _IDVerificationPageState extends State<IDVerificationPage> {
 
     setState(() => _isLoading = true);
 
-    // Simulate API call for verification
-    await Future.delayed(const Duration(seconds: 2));
-
-    if (mounted) {
-      // Save to user provider
+    try {
+      // Upload documents to Firebase Storage
       await Provider.of<UserProvider>(context, listen: false)
-          .completeVerification(_nationalIdController.text);
+          .uploadVerificationDocuments(
+        nationalId: _nationalIdController.text,
+        nationalIdFront: File(_nationalIdFront!.path),
+        nationalIdBack: File(_nationalIdBack!.path),
+        drivingLicense: File(_drivingLicense!.path),
+      );
 
+      if (mounted) {
+        setState(() => _isLoading = false);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Documents submitted successfully! Verification pending.'),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+
+        Navigator.pushReplacementNamed(context, '/home');
+      }
+    } catch (e) {
       setState(() => _isLoading = false);
-      Navigator.pushReplacementNamed(context, '/home');
+      _showError('Failed to submit documents: ${e.toString()}');
     }
   }
 

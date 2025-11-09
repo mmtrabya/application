@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
-  // Primary Lime Green
-  static const Color primaryLime = Color(0xFFD6FF3F);
-  static const Color secondaryLime = Color(0xFFBFE830);
-  static const Color tertiaryLime = Color(0xFFA8D121);
+  // Primary Red (#ab0f0f)
+  static const Color primaryRed = Color(0xFFAB0F0F);
+  static const Color secondaryRed = Color(0xFFD32F2F);
+  static const Color tertiaryRed = Color(0xFFE53935);
+  static const Color darkRed = Color(0xFF8B0000);
 
   // Background Colors
   static const Color lightBackground = Color(0xFFF5F7FA);
@@ -12,26 +13,34 @@ class AppColors {
   static const Color darkSurface = Color(0xFF1E1E1E);
 
   // Status Colors
-  static const Color success = Colors.green;
+  static const Color success = Color(0xFF4CAF50);
   static const Color error = Color(0xFFD32F2F);
-  static const Color warning = Colors.amber;
+  static const Color warning = Color(0xFFFFA726);
+  static const Color info = Color(0xFF2196F3);
 
   // Gradients
-  static const LinearGradient limeGradient = LinearGradient(
+  static const LinearGradient redGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [primaryLime, secondaryLime, tertiaryLime],
+    colors: [primaryRed, secondaryRed, tertiaryRed],
   );
 
-  static LinearGradient limeGradientWithOpacity(double opacity) {
+  static LinearGradient redGradientWithOpacity(double opacity) {
     return LinearGradient(
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
       colors: [
-        primaryLime.withOpacity(opacity * 0.9),
-        secondaryLime.withOpacity(opacity * 0.8),
-        tertiaryLime.withOpacity(opacity * 0.7),
+        primaryRed.withOpacity(opacity * 0.9),
+        secondaryRed.withOpacity(opacity * 0.8),
+        tertiaryRed.withOpacity(opacity * 0.7),
       ],
     );
   }
+
+  // Dark mode gradient
+  static const LinearGradient darkRedGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [darkRed, primaryRed, secondaryRed],
+  );
 }

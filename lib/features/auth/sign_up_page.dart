@@ -51,7 +51,7 @@ class _SignUpPageState extends State<SignUpPage> {
       setState(() => _isLoading = true);
 
       try {
-        // Save user data to provider
+        // Create Firebase account
         await Provider.of<UserProvider>(context, listen: false).signUp(
           name: _nameController.text.trim(),
           email: _emailController.text.trim(),
@@ -79,14 +79,31 @@ class _SignUpPageState extends State<SignUpPage> {
         }
       } catch (e) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(_getErrorMessage(e.toString())),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
       }
+    }
+  }
+
+  String _getErrorMessage(String error) {
+    if (error.contains('email-already-in-use')) {
+      return 'This email is already registered';
+    } else if (error.contains('invalid-email')) {
+      return 'Invalid email address';
+    } else if (error.contains('weak-password')) {
+      return 'Password is too weak';
+    } else if (error.contains('operation-not-allowed')) {
+      return 'Email/password accounts are not enabled';
+    } else {
+      return 'Registration failed. Please try again';
     }
   }
 
@@ -94,7 +111,10 @@ class _SignUpPageState extends State<SignUpPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Create Account'),
+        title: const Text(
+          'Create Account',
+          style: TextStyle(fontFamily: 'Inter'),
+        ),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -104,7 +124,11 @@ class _SignUpPageState extends State<SignUpPage> {
             children: [
               GradientContainer(
                 padding: const EdgeInsets.all(20),
-                child: const Icon(Icons.person_add, size: 60, color: Colors.white),
+                child: const Icon(
+                  Icons.person_add,
+                  size: 60,
+                  color: Colors.white,
+                ),
               ),
               const SizedBox(height: 32),
               const Text(
@@ -136,8 +160,15 @@ class _SignUpPageState extends State<SignUpPage> {
                       textCapitalization: TextCapitalization.words,
                       decoration: InputDecoration(
                         labelText: 'Full Name',
-                        prefixIcon: Icon(Icons.person_outlined, color: Theme.of(context).colorScheme.primary),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                        prefixIcon: Icon(
+                          Icons.person_outlined,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        filled: true,
+                        fillColor: Theme.of(context).colorScheme.surface,
                       ),
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) {
@@ -155,11 +186,20 @@ class _SignUpPageState extends State<SignUpPage> {
                       keyboardType: TextInputType.emailAddress,
                       decoration: InputDecoration(
                         labelText: 'Email',
-                        prefixIcon: Icon(Icons.email_outlined, color: Theme.of(context).colorScheme.primary),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                        prefixIcon: Icon(
+                          Icons.email_outlined,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        filled: true,
+                        fillColor: Theme.of(context).colorScheme.surface,
                       ),
                       validator: (value) {
-                        if (value == null || value.isEmpty) return 'Please enter your email';
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter your email';
+                        }
                         if (!value.contains('@') || !value.contains('.')) {
                           return 'Please enter a valid email';
                         }
@@ -172,8 +212,15 @@ class _SignUpPageState extends State<SignUpPage> {
                       keyboardType: TextInputType.phone,
                       decoration: InputDecoration(
                         labelText: 'Phone Number',
-                        prefixIcon: Icon(Icons.phone_outlined, color: Theme.of(context).colorScheme.primary),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                        prefixIcon: Icon(
+                          Icons.phone_outlined,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        filled: true,
+                        fillColor: Theme.of(context).colorScheme.surface,
                       ),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
@@ -191,16 +238,33 @@ class _SignUpPageState extends State<SignUpPage> {
                       obscureText: _obscurePassword,
                       decoration: InputDecoration(
                         labelText: 'Password',
-                        prefixIcon: Icon(Icons.lock_outlined, color: Theme.of(context).colorScheme.primary),
-                        suffixIcon: IconButton(
-                          icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility),
-                          onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                        prefixIcon: Icon(
+                          Icons.lock_outlined,
+                          color: Theme.of(context).colorScheme.primary,
                         ),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscurePassword
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                          ),
+                          onPressed: () => setState(
+                                () => _obscurePassword = !_obscurePassword,
+                          ),
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        filled: true,
+                        fillColor: Theme.of(context).colorScheme.surface,
                       ),
                       validator: (value) {
-                        if (value == null || value.isEmpty) return 'Please enter your password';
-                        if (value.length < 6) return 'Password must be at least 6 characters';
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter your password';
+                        }
+                        if (value.length < 6) {
+                          return 'Password must be at least 6 characters';
+                        }
                         return null;
                       },
                     ),
@@ -210,15 +274,30 @@ class _SignUpPageState extends State<SignUpPage> {
                       obscureText: _obscureConfirmPassword,
                       decoration: InputDecoration(
                         labelText: 'Confirm Password',
-                        prefixIcon: Icon(Icons.lock_outlined, color: Theme.of(context).colorScheme.primary),
-                        suffixIcon: IconButton(
-                          icon: Icon(_obscureConfirmPassword ? Icons.visibility_off : Icons.visibility),
-                          onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
+                        prefixIcon: Icon(
+                          Icons.lock_outlined,
+                          color: Theme.of(context).colorScheme.primary,
                         ),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscureConfirmPassword
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                          ),
+                          onPressed: () => setState(
+                                () => _obscureConfirmPassword = !_obscureConfirmPassword,
+                          ),
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        filled: true,
+                        fillColor: Theme.of(context).colorScheme.surface,
                       ),
                       validator: (value) {
-                        if (value != _passwordController.text) return 'Passwords do not match';
+                        if (value != _passwordController.text) {
+                          return 'Passwords do not match';
+                        }
                         return null;
                       },
                     ),
@@ -227,19 +306,24 @@ class _SignUpPageState extends State<SignUpPage> {
                       children: [
                         Checkbox(
                           value: _acceptedTerms,
-                          onChanged: (value) => setState(() => _acceptedTerms = value ?? false),
+                          onChanged: (value) => setState(
+                                () => _acceptedTerms = value ?? false,
+                          ),
                         ),
                         Expanded(
                           child: GestureDetector(
                             onTap: () {
                               Navigator.push(
                                 context,
-                                MaterialPageRoute(builder: (_) => const TermsConditionsPage()),
+                                MaterialPageRoute(
+                                  builder: (_) => const TermsConditionsPage(),
+                                ),
                               );
                             },
                             child: Text.rich(
                               TextSpan(
                                 text: 'I accept the ',
+                                style: const TextStyle(fontFamily: 'Inter'),
                                 children: [
                                   TextSpan(
                                     text: 'Terms & Conditions',
@@ -247,6 +331,7 @@ class _SignUpPageState extends State<SignUpPage> {
                                       color: Theme.of(context).colorScheme.primary,
                                       fontWeight: FontWeight.bold,
                                       decoration: TextDecoration.underline,
+                                      fontFamily: 'Inter',
                                     ),
                                   ),
                                 ],
@@ -264,17 +349,27 @@ class _SignUpPageState extends State<SignUpPage> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Theme.of(context).colorScheme.primary,
                           foregroundColor: Colors.black,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          padding: const EdgeInsets.symmetric(vertical: 18),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
                         ),
                         child: _isLoading
                             ? const SizedBox(
                           height: 20,
                           width: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.black,
+                          ),
                         )
                             : const Text(
                           'Sign Up',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, fontFamily: 'Inter'),
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Inter',
+                          ),
                         ),
                       ),
                     ),
