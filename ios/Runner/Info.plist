@@ -3,7 +3,9 @@
 <plist version="1.0">
 <dict>
     <!-- Existing keys... -->
-
+    <key>NSAppTransportSecurity</key>
+    <key>NSAllowsArbitraryLoads</key>
+    <true/>
     <!-- Camera Permission -->
     <key>NSCameraUsageDescription</key>
     <string>We need access to your camera to capture photos of your ID and driving license for verification purposes.</string>

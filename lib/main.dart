@@ -8,6 +8,7 @@ import 'config/api_config.dart';
 import 'config/firebase_config.dart';
 import 'providers/user_provider.dart';
 import 'services/firebase_service.dart';
+import 'services/paymob_service.dart';
 import 'features/splash/splash_screen.dart';
 import 'features/auth/sign_in_page.dart';
 import 'features/home/home_page.dart';

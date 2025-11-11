@@ -8,6 +8,8 @@ environment:
   sdk: ^3.6.0
 
 dependencies:
+  cloud_functions: ^5.1.4
+  webview_flutter: ^4.10.0
   flutter:
     sdk: flutter
 
