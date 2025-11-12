@@ -1,19 +1,30 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+          package="com.kynetic.sdv">
+
+    <!-- Required Permissions -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.CAMERA" />
+
+    <!-- Camera Features -->
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
+
     <application
-            android:label="sdv_application"
+            android:label="Kynetic SDV"
             android:name="${applicationName}"
             android:icon="@mipmap/ic_launcher">
 
-        <!-- ✅ Put your API key here (inside <application>, not inside <activity>) -->
+        <!-- ✅ Google Maps API Key (MUST be inside <application>, NOT inside <activity>) -->
         <meta-data
                 android:name="com.google.android.geo.API_KEY"
-                android:value="AIzaSyAYBEhbP3Zf0-z7Y5QKedoR1YIK6P4oLkE" />
+                android:value="AIzaSyBQ1lpUuATAOKNZ_QtTgdkpVCyo1jtCQN4" />
 
         <activity
                 android:name=".MainActivity"
                 android:exported="true"
                 android:launchMode="singleTop"
-                android:taskAffinity=""
                 android:theme="@style/LaunchTheme"
                 android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
                 android:hardwareAccelerated="true"

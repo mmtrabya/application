@@ -7,8 +7,8 @@ import 'config/theme/app_theme.dart';
 import 'config/api_config.dart';
 import 'config/firebase_config.dart';
 import 'providers/user_provider.dart';
+import 'providers/booking_provider.dart'; // ← ADD THIS
 import 'services/firebase_service.dart';
-import 'services/paymob_service.dart';
 import 'features/splash/splash_screen.dart';
 import 'features/auth/sign_in_page.dart';
 import 'features/home/home_page.dart';
@@ -40,8 +40,12 @@ void main() async {
   );
 
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => UserProvider(),
+    // ✅ ADD MultiProvider to register multiple providers
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => UserProvider()),
+        ChangeNotifierProvider(create: (_) => BookingProvider()), // ← ADD THIS
+      ],
       child: const SmartCityTransportApp(),
     ),
   );
@@ -139,7 +143,7 @@ class _SmartCityTransportAppState extends State<SmartCityTransportApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Smart City Transport',
+      title: 'Kynetic SDV',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme().copyWith(
         textTheme: AppTheme.lightTheme().textTheme.apply(
