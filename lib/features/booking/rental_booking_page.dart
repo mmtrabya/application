@@ -4,8 +4,10 @@ import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
+import 'dart:async';
 import '../../providers/booking_provider.dart';
 import '../../providers/user_provider.dart';
+import 'active_trip_page.dart';
 
 class RentalBookingPage extends StatefulWidget {
   final VoidCallback onThemeToggle;
@@ -17,7 +19,7 @@ class RentalBookingPage extends StatefulWidget {
 
 class _RentalBookingPageState extends State<RentalBookingPage> {
   GoogleMapController? _mapController;
-  LatLng _currentLocation = const LatLng(30.0444, 31.2357); // Cairo default
+  LatLng? _currentLocation; // ✅ Nullable - no default location
   Set<Marker> _markers = {};
   List<VehicleModel> _nearbyVehicles = [];
   bool _isLoadingLocation = true;
@@ -25,7 +27,8 @@ class _RentalBookingPageState extends State<RentalBookingPage> {
   bool _isBooking = false;
   String? _unlockCode;
   VehicleModel? _selectedVehicle;
-  bool _showList = true; // Toggle between map and list view
+  bool _showList = true;
+  String? _locationError;
 
   @override
   void initState() {
@@ -34,37 +37,49 @@ class _RentalBookingPageState extends State<RentalBookingPage> {
   }
 
   Future<void> _initializeLocation() async {
-    setState(() => _isLoadingLocation = true);
+    setState(() {
+      _isLoadingLocation = true;
+      _locationError = null;
+    });
 
     try {
+      // Check if location services are enabled
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        setState(() {
+          _locationError = 'Location services are disabled';
+          _isLoadingLocation = false;
+        });
+        _showLocationServicesDialog();
+        return;
+      }
+
       // Check location permission
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          setState(() {
+            _locationError = 'Location permission denied';
+            _isLoadingLocation = false;
+          });
+          return;
+        }
       }
 
-      if (permission == LocationPermission.denied ||
-          permission == LocationPermission.deniedForever) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('Location permission is required'),
-              action: SnackBarAction(
-                label: 'Settings',
-                onPressed: () => Geolocator.openLocationSettings(),
-              ),
-            ),
-          );
-        }
-        setState(() => _isLoadingLocation = false);
-        // Still load vehicles with default location
-        await _loadNearbyVehicles();
+      if (permission == LocationPermission.deniedForever) {
+        setState(() {
+          _locationError = 'Location permission permanently denied';
+          _isLoadingLocation = false;
+        });
+        _showPermissionDeniedDialog();
         return;
       }
 
-      // Get current position
+      // Get current position with timeout
       final Position position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 10),
       );
 
       setState(() {
@@ -72,47 +87,132 @@ class _RentalBookingPageState extends State<RentalBookingPage> {
         _isLoadingLocation = false;
       });
 
+      debugPrint('✅ User location: ${position.latitude}, ${position.longitude}');
+
       // Move camera to user location
       _mapController?.animateCamera(
-        CameraUpdate.newLatLngZoom(_currentLocation, 14),
+        CameraUpdate.newLatLngZoom(_currentLocation!, 14),
       );
 
       // Load nearby vehicles
       await _loadNearbyVehicles();
+    } on TimeoutException {
+      setState(() {
+        _locationError = 'Location request timed out';
+        _isLoadingLocation = false;
+      });
+      if (mounted) {
+        _showErrorSnackbar('Unable to get location. Please try again.');
+      }
     } catch (e) {
-      debugPrint('Error getting location: $e');
-      setState(() => _isLoadingLocation = false);
-      // Load vehicles anyway with default location
-      await _loadNearbyVehicles();
+      debugPrint('❌ Error getting location: $e');
+      setState(() {
+        _locationError = e.toString();
+        _isLoadingLocation = false;
+      });
+      if (mounted) {
+        _showErrorSnackbar('Failed to get your location: ${e.toString()}');
+      }
     }
   }
 
+  void _showLocationServicesDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Location Services Disabled'),
+        content: const Text(
+          'Please enable location services to find nearby vehicles.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Geolocator.openLocationSettings();
+            },
+            child: const Text('Open Settings'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showPermissionDeniedDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Location Permission Required'),
+        content: const Text(
+          'This app needs location permission to find nearby vehicles. Please grant permission in your device settings.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Geolocator.openAppSettings();
+            },
+            child: const Text('Open Settings'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showErrorSnackbar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 5),
+        action: SnackBarAction(
+          label: 'Retry',
+          textColor: Colors.white,
+          onPressed: _initializeLocation,
+        ),
+      ),
+    );
+  }
+
   Future<void> _loadNearbyVehicles() async {
+    if (_currentLocation == null) {
+      debugPrint('⚠️ Cannot load vehicles - location not available');
+      return;
+    }
+
     setState(() => _isLoadingVehicles = true);
 
     try {
       final bookingProvider = Provider.of<BookingProvider>(context, listen: false);
       await bookingProvider.loadNearbyVehicles(
-        latitude: _currentLocation.latitude,
-        longitude: _currentLocation.longitude,
-        radius: 10.0, // 10km radius
+        latitude: _currentLocation!.latitude,
+        longitude: _currentLocation!.longitude,
+        radius: 10.0,
       );
 
-      _nearbyVehicles = bookingProvider.nearbyVehicles;
+      setState(() {
+        _nearbyVehicles = bookingProvider.nearbyVehicles;
+      });
+
       _updateMapMarkers();
 
-      if (_nearbyVehicles.isEmpty) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('No vehicles available nearby. Try expanding search radius.'),
-              backgroundColor: Colors.orange,
-            ),
-          );
-        }
+      if (_nearbyVehicles.isEmpty && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No vehicles available nearby. Try expanding search radius.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
       }
     } catch (e) {
-      debugPrint('Error loading vehicles: $e');
+      debugPrint('❌ Error loading vehicles: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -127,13 +227,15 @@ class _RentalBookingPageState extends State<RentalBookingPage> {
   }
 
   void _updateMapMarkers() {
+    if (_currentLocation == null) return;
+
     final Set<Marker> markers = {};
 
     // Add user location marker
     markers.add(
       Marker(
         markerId: const MarkerId('user_location'),
-        position: _currentLocation,
+        position: _currentLocation!,
         icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
         infoWindow: const InfoWindow(title: 'Your Location'),
       ),
@@ -184,7 +286,6 @@ class _RentalBookingPageState extends State<RentalBookingPage> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Handle bar
             Center(
               child: Container(
                 width: 40,
@@ -196,8 +297,6 @@ class _RentalBookingPageState extends State<RentalBookingPage> {
               ),
             ),
             const SizedBox(height: 24),
-
-            // Vehicle info
             Row(
               children: [
                 Container(
@@ -249,8 +348,6 @@ class _RentalBookingPageState extends State<RentalBookingPage> {
               ],
             ),
             const SizedBox(height: 24),
-
-            // Specs
             Row(
               children: [
                 Expanded(
@@ -277,8 +374,6 @@ class _RentalBookingPageState extends State<RentalBookingPage> {
               ],
             ),
             const SizedBox(height: 24),
-
-            // Price
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -329,8 +424,6 @@ class _RentalBookingPageState extends State<RentalBookingPage> {
               ),
             ),
             const SizedBox(height: 24),
-
-            // Book button
             ElevatedButton(
               onPressed: () {
                 Navigator.pop(context);
@@ -374,6 +467,16 @@ class _RentalBookingPageState extends State<RentalBookingPage> {
   }
 
   Future<void> _bookVehicle(VehicleModel vehicle) async {
+    if (_currentLocation == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Location not available. Please enable location services.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     final bookingProvider = Provider.of<BookingProvider>(context, listen: false);
 
@@ -393,13 +496,12 @@ class _RentalBookingPageState extends State<RentalBookingPage> {
     });
 
     try {
-      // Create booking
       final bookingId = await bookingProvider.createBooking(
         userId: userProvider.user!.userId,
         vehicleId: vehicle.vehicleId,
         pickupLocation: {
-          'latitude': _currentLocation.latitude,
-          'longitude': _currentLocation.longitude,
+          'latitude': _currentLocation!.latitude,
+          'longitude': _currentLocation!.longitude,
         },
         dropoffLocation: {},
         estimatedPrice: vehicle.pricePerHour,
@@ -407,7 +509,6 @@ class _RentalBookingPageState extends State<RentalBookingPage> {
         estimatedDuration: 0,
       );
 
-      // Get unlock code
       final booking = bookingProvider.currentBooking;
       if (booking != null) {
         setState(() => _unlockCode = booking.unlockCode);
@@ -547,15 +648,51 @@ class _RentalBookingPageState extends State<RentalBookingPage> {
                 ],
               ),
             ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.blue.withOpacity(0.3)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.info_outline, color: Colors.blue, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Enter this code on the vehicle\'s infotainment screen',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.blue.shade700,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              _loadNearbyVehicles(); // Refresh vehicles
+              // ✅ Navigate to Active Trip Screen
+              final bookingProvider = Provider.of<BookingProvider>(context, listen: false);
+              if (bookingProvider.currentBooking != null) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ActiveTripPage(
+                      booking: bookingProvider.currentBooking!,
+                    ),
+                  ),
+                );
+              }
             },
-            child: const Text('Got it!'),
+            child: const Text('View Trip'),
           ),
         ],
       ),
@@ -572,7 +709,6 @@ class _RentalBookingPageState extends State<RentalBookingPage> {
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
-              // Vehicle Icon
               Container(
                 width: 60,
                 height: 60,
@@ -592,8 +728,6 @@ class _RentalBookingPageState extends State<RentalBookingPage> {
                 ),
               ),
               const SizedBox(width: 16),
-
-              // Vehicle Info
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -630,8 +764,6 @@ class _RentalBookingPageState extends State<RentalBookingPage> {
                   ],
                 ),
               ),
-
-              // Price
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
@@ -662,16 +794,18 @@ class _RentalBookingPageState extends State<RentalBookingPage> {
       appBar: AppBar(
         title: const Text('Book Vehicle'),
         actions: [
-          IconButton(
-            icon: Icon(_showList ? Icons.map : Icons.list),
-            onPressed: () => setState(() => _showList = !_showList),
-            tooltip: _showList ? 'Map View' : 'List View',
-          ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _isLoadingVehicles ? null : _loadNearbyVehicles,
-            tooltip: 'Refresh',
-          ),
+          if (_currentLocation != null) ...[
+            IconButton(
+              icon: Icon(_showList ? Icons.map : Icons.list),
+              onPressed: () => setState(() => _showList = !_showList),
+              tooltip: _showList ? 'Map View' : 'List View',
+            ),
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              onPressed: _isLoadingVehicles ? null : _loadNearbyVehicles,
+              tooltip: 'Refresh',
+            ),
+          ],
         ],
       ),
       body: _isLoadingLocation
@@ -685,13 +819,64 @@ class _RentalBookingPageState extends State<RentalBookingPage> {
           ],
         ),
       )
+          : _currentLocation == null
+          ? Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.location_off,
+                size: 80,
+                color: Colors.grey.shade400,
+              ),
+              const SizedBox(height: 24),
+              const Text(
+                'Location Required',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                _locationError ?? 'Unable to access your location',
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 32),
+              ElevatedButton.icon(
+                onPressed: _initializeLocation,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Retry'),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 32,
+                    vertical: 16,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextButton.icon(
+                onPressed: () => Geolocator.openAppSettings(),
+                icon: const Icon(Icons.settings),
+                label: const Text('Open Settings'),
+              ),
+            ],
+          ),
+        ),
+      )
           : Stack(
         children: [
-          // Map or List View
           if (!_showList)
             GoogleMap(
               initialCameraPosition: CameraPosition(
-                target: _currentLocation,
+                target: _currentLocation!,
                 zoom: 14,
               ),
               markers: _markers,
@@ -701,12 +886,11 @@ class _RentalBookingPageState extends State<RentalBookingPage> {
               onMapCreated: (controller) {
                 _mapController = controller;
                 _mapController?.animateCamera(
-                  CameraUpdate.newLatLngZoom(_currentLocation, 14),
+                  CameraUpdate.newLatLngZoom(_currentLocation!, 14),
                 );
               },
             )
           else
-          // Vehicle List
             _nearbyVehicles.isEmpty
                 ? Center(
               child: Column(
@@ -720,12 +904,18 @@ class _RentalBookingPageState extends State<RentalBookingPage> {
                   const SizedBox(height: 16),
                   const Text(
                     'No vehicles available nearby',
-                    style: TextStyle(fontSize: 18, color: Colors.grey),
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: Colors.grey,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   const Text(
                     'Try adjusting your location or check back later',
-                    style: TextStyle(fontSize: 14, color: Colors.grey),
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey,
+                    ),
                   ),
                   const SizedBox(height: 24),
                   ElevatedButton.icon(
@@ -739,14 +929,19 @@ class _RentalBookingPageState extends State<RentalBookingPage> {
                 : ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                // Header
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
-                        Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                        Theme.of(context).colorScheme.secondary.withOpacity(0.05),
+                        Theme.of(context)
+                            .colorScheme
+                            .primary
+                            .withOpacity(0.1),
+                        Theme.of(context)
+                            .colorScheme
+                            .secondary
+                            .withOpacity(0.05),
                       ],
                     ),
                     borderRadius: BorderRadius.circular(12),
@@ -772,7 +967,10 @@ class _RentalBookingPageState extends State<RentalBookingPage> {
                             ),
                             const Text(
                               'Near your location',
-                              style: TextStyle(fontSize: 12, color: Colors.grey),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey,
+                              ),
                             ),
                           ],
                         ),
@@ -781,13 +979,11 @@ class _RentalBookingPageState extends State<RentalBookingPage> {
                   ),
                 ),
                 const SizedBox(height: 16),
-
-                // Vehicle List
-                ..._nearbyVehicles.map((vehicle) => _buildVehicleListItem(vehicle)),
+                ..._nearbyVehicles.map(
+                      (vehicle) => _buildVehicleListItem(vehicle),
+                ),
               ],
             ),
-
-          // Loading overlay
           if (_isLoadingVehicles || _isBooking)
             Container(
               color: Colors.black.withOpacity(0.5),
@@ -798,7 +994,9 @@ class _RentalBookingPageState extends State<RentalBookingPage> {
                     const CircularProgressIndicator(),
                     const SizedBox(height: 16),
                     Text(
-                      _isBooking ? 'Booking vehicle...' : 'Loading vehicles...',
+                      _isBooking
+                          ? 'Booking vehicle...'
+                          : 'Loading vehicles...',
                       style: const TextStyle(color: Colors.white),
                     ),
                   ],

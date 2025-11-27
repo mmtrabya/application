@@ -12,14 +12,15 @@ import 'services/firebase_service.dart';
 import 'features/splash/splash_screen.dart';
 import 'features/auth/sign_in_page.dart';
 import 'features/home/home_page.dart';
+import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Firebase
+  // Initialize Firebase (UPDATED)
   try {
     await Firebase.initializeApp(
-      options: FirebaseConfig.currentPlatform,
+      options: DefaultFirebaseOptions.currentPlatform, // ← UPDATED
     );
     debugPrint('✅ Firebase initialized successfully');
   } catch (e) {
@@ -40,11 +41,10 @@ void main() async {
   );
 
   runApp(
-    // ✅ ADD MultiProvider to register multiple providers
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => UserProvider()),
-        ChangeNotifierProvider(create: (_) => BookingProvider()), // ← ADD THIS
+        ChangeNotifierProvider(create: (_) => BookingProvider()),
       ],
       child: const SmartCityTransportApp(),
     ),

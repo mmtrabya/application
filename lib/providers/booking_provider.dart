@@ -1,5 +1,7 @@
+// lib/providers/booking_provider.dart - UPDATED with auto-cancel
 import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:async';
 import '../services/firebase_service.dart';
 
 class BookingModel {
@@ -89,7 +91,7 @@ class VehicleModel {
   double pricePerHour;
   double pricePerKm;
   Map<String, dynamic>? versions;
-  double? distance; // Calculated distance from user
+  double? distance;
 
   VehicleModel({
     required this.vehicleId,
@@ -113,7 +115,6 @@ class VehicleModel {
 
   factory VehicleModel.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
-
     return VehicleModel(
       vehicleId: doc.id,
       model: data['model'] ?? '',
@@ -165,11 +166,24 @@ class BookingProvider extends ChangeNotifier {
   List<BookingModel> _userBookings = [];
   BookingModel? _currentBooking;
   bool _isLoading = false;
+  Timer? _expirationTimer;
+
+  // Track trip metrics
+  DateTime? _tripStartTime;
+  double _tripDistanceKm = 0.0;
+  Timer? _tripTimer;
 
   List<VehicleModel> get nearbyVehicles => _nearbyVehicles;
   List<BookingModel> get userBookings => _userBookings;
   BookingModel? get currentBooking => _currentBooking;
   bool get isLoading => _isLoading;
+  DateTime? get tripStartTime => _tripStartTime;
+  double get tripDistanceKm => _tripDistanceKm;
+
+  int get tripDurationMinutes {
+    if (_tripStartTime == null) return 0;
+    return DateTime.now().difference(_tripStartTime!).inMinutes;
+  }
 
   /// Get nearby vehicles
   Future<void> loadNearbyVehicles({
@@ -196,7 +210,7 @@ class BookingProvider extends ChangeNotifier {
     }
   }
 
-  /// Create a booking
+  /// Create a booking with auto-cancellation after 10 minutes
   Future<String?> createBooking({
     required String userId,
     required String vehicleId,
@@ -223,6 +237,9 @@ class BookingProvider extends ChangeNotifier {
       // Load the created booking
       await loadBooking(bookingId);
 
+      // ✅ START 10-MINUTE AUTO-CANCEL TIMER
+      _startExpirationTimer(bookingId, vehicleId);
+
       return bookingId;
     } catch (e) {
       debugPrint('Error creating booking: $e');
@@ -231,6 +248,96 @@ class BookingProvider extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  /// Start 10-minute expiration timer
+  void _startExpirationTimer(String bookingId, String vehicleId) {
+    _expirationTimer?.cancel();
+
+    _expirationTimer = Timer(const Duration(minutes: 10), () async {
+      debugPrint('⏰ Booking $bookingId expired - checking status...');
+
+      // Check if trip has started
+      final booking = await _firebaseService.getBooking(bookingId);
+
+      if (booking != null && booking['status'] == 'confirmed') {
+        // Trip never started - cancel booking
+        debugPrint('❌ Auto-cancelling expired booking $bookingId');
+
+        await _firebaseService.firestore.collection('bookings').doc(bookingId).update({
+          'status': 'cancelled',
+          'cancellationReason': 'Expired - not started within 10 minutes',
+          'cancelledAt': FieldValue.serverTimestamp(),
+        });
+
+        // Release vehicle back to available status
+        await _firebaseService.firestore.collection('vehicles').doc(vehicleId).update({
+          'status': 'available',
+          'currentBooking': FieldValue.delete(),
+        });
+
+        // Clear current booking
+        if (_currentBooking?.bookingId == bookingId) {
+          _currentBooking = null;
+          notifyListeners();
+        }
+
+        debugPrint('✅ Vehicle $vehicleId released back to available');
+      } else {
+        debugPrint('✓ Booking already started or cancelled');
+      }
+    });
+  }
+
+  /// Start the trip (called when user enters unlock code in vehicle)
+  Future<void> startTrip(String bookingId) async {
+    try {
+      _tripStartTime = DateTime.now();
+      _tripDistanceKm = 0.0;
+
+      await _firebaseService.firestore.collection('bookings').doc(bookingId).update({
+        'status': 'active',
+        'actualStartTime': FieldValue.serverTimestamp(),
+      });
+
+      // Cancel expiration timer since trip started
+      _expirationTimer?.cancel();
+
+      // Start trip tracking
+      _startTripTracking(bookingId);
+
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error starting trip: $e');
+      rethrow;
+    }
+  }
+
+  /// Track trip distance and duration
+  void _startTripTracking(String bookingId) {
+    _tripTimer?.cancel();
+
+    // Update trip metrics every 10 seconds
+    _tripTimer = Timer.periodic(const Duration(seconds: 10), (timer) async {
+      if (_tripStartTime == null) {
+        timer.cancel();
+        return;
+      }
+
+      final duration = DateTime.now().difference(_tripStartTime!).inMinutes;
+
+      // Update in Firebase
+      await _firebaseService.firestore.collection('bookings').doc(bookingId).update({
+        'tripDurationMinutes': duration,
+        'tripDistanceKm': _tripDistanceKm,
+      });
+    });
+  }
+
+  /// Update trip distance (called from GPS tracking)
+  void updateTripDistance(double distanceKm) {
+    _tripDistanceKm = distanceKm;
+    notifyListeners();
   }
 
   /// Load a specific booking
@@ -277,7 +384,13 @@ class BookingProvider extends ChangeNotifier {
         actualDuration: actualDuration,
       );
 
+      // Stop trip tracking
+      _tripTimer?.cancel();
+      _expirationTimer?.cancel();
+      _tripStartTime = null;
+      _tripDistanceKm = 0.0;
       _currentBooking = null;
+
       notifyListeners();
     } catch (e) {
       debugPrint('Error completing booking: $e');
@@ -288,6 +401,17 @@ class BookingProvider extends ChangeNotifier {
   /// Clear current booking
   void clearCurrentBooking() {
     _currentBooking = null;
+    _tripStartTime = null;
+    _tripDistanceKm = 0.0;
+    _expirationTimer?.cancel();
+    _tripTimer?.cancel();
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _expirationTimer?.cancel();
+    _tripTimer?.cancel();
+    super.dispose();
   }
 }

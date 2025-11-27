@@ -3,7 +3,10 @@
 // ============================================
 
 plugins {
-    id("com.android.application")  // ← CHANGED: Keep this as is
+    id("com.android.application")
+    // START: FlutterFire Configuration
+    id("com.google.gms.google-services")
+    // END: FlutterFire Configuration  // ← CHANGED: Keep this as is
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
@@ -39,7 +42,11 @@ android {
         }
     }
 }
-
+dependencies {
+    // ... existing dependencies
+    implementation("com.google.firebase:firebase-appcheck-playintegrity:17.1.1")
+    implementation("com.google.firebase:firebase-appcheck-debug:17.1.1")
+}
 flutter {
     source = "../.."
 }

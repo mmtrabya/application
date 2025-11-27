@@ -22,12 +22,12 @@ dependencies:
   provider: ^6.1.2
 
   # Firebase
-  firebase_core: ^3.8.1
-  firebase_auth: ^5.3.3
-  cloud_firestore: ^5.5.2
+  firebase_core: ^3.15.2
+  firebase_auth: ^5.7.0
+  cloud_firestore: ^5.6.12
   firebase_storage: ^12.3.6
   firebase_database: ^11.2.1
-  firebase_messaging: ^15.1.5
+  firebase_messaging: ^15.2.10
 
   # Maps & Location
   google_maps_flutter: ^2.9.0
@@ -56,6 +56,7 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.12.0   # <-- Added here
 
 flutter:
   uses-material-design: true
@@ -77,3 +78,11 @@ flutter:
           weight: 700
         - asset: fonts/Inter_28pt-ExtraBold.ttf
           weight: 800
+
+# ------------------------------
+# Flutter Launcher Icons Config
+# ------------------------------
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "assets/icons/home.png"

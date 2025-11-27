@@ -36,7 +36,6 @@ class FirebaseService {
     required String phone,
   }) async {
     try {
-      // Create user account
       final UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
@@ -45,10 +44,8 @@ class FirebaseService {
       final User? user = userCredential.user;
 
       if (user != null) {
-        // Update display name
         await user.updateDisplayName(name);
 
-        // Create user document in Firestore
         await _firestore.collection('users').doc(user.uid).set({
           'userId': user.uid,
           'name': name,
@@ -85,7 +82,6 @@ class FirebaseService {
       final User? user = userCredential.user;
 
       if (user != null) {
-        // Update last active
         await _firestore.collection('users').doc(user.uid).update({
           'lastActive': FieldValue.serverTimestamp(),
         });
@@ -155,7 +151,7 @@ class FirebaseService {
   Future<String> uploadIdDocument({
     required String userId,
     required File file,
-    required String documentType, // 'national_id_front', 'national_id_back', 'driving_license'
+    required String documentType,
   }) async {
     try {
       final String fileName = '${userId}_$documentType.jpg';
@@ -252,7 +248,6 @@ class FirebaseService {
         }
       }
 
-      // Sort by distance
       nearbyVehicles.sort((a, b) => a['distance'].compareTo(b['distance']));
 
       return nearbyVehicles;
@@ -274,8 +269,10 @@ class FirebaseService {
     required int estimatedDuration,
   }) async {
     try {
-      // Generate 4-digit unlock code
       final String unlockCode = _generateUnlockCode();
+
+      final now = DateTime.now();
+      final expiresAt = now.add(const Duration(minutes: 15));
 
       final DocumentReference bookingRef = await _firestore.collection('bookings').add({
         'userId': userId,
@@ -283,9 +280,7 @@ class FirebaseService {
         'type': 'rental',
         'status': 'confirmed',
         'unlockCode': unlockCode,
-        'codeExpiresAt': Timestamp.fromDate(
-          DateTime.now().add(const Duration(minutes: 15)),
-        ),
+        'codeExpiresAt': Timestamp.fromDate(expiresAt),
         'pickupLocation': pickupLocation,
         'dropoffLocation': dropoffLocation,
         'estimatedPrice': estimatedPrice,
@@ -295,14 +290,15 @@ class FirebaseService {
         'paymentStatus': 'pending',
       });
 
-      // Update vehicle status
       await _firestore.collection('vehicles').doc(vehicleId).update({
         'status': 'reserved',
         'currentBooking': {
           'bookingId': bookingRef.id,
           'userId': userId,
           'unlockCode': unlockCode,
-          'status': 'pending',
+          'status': 'confirmed',
+          'createdAt': Timestamp.fromDate(now),
+          'expiresAt': Timestamp.fromDate(expiresAt),
         },
       });
 
@@ -430,7 +426,7 @@ class FirebaseService {
 
   /// Calculate distance between two coordinates (Haversine formula)
   double _calculateDistance(double lat1, double lon1, double lat2, double lon2) {
-    const double earthRadius = 6371; // km
+    const double earthRadius = 6371;
 
     final double dLat = _toRadians(lat2 - lat1);
     final double dLon = _toRadians(lon2 - lon1);

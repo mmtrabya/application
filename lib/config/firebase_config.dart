@@ -1,15 +1,21 @@
+// lib/config/firebase_config.dart
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 
 class FirebaseConfig {
-  static const String apiKey = "AIzaSyDPEAz-ao5mRfyLRwf4VtYjsiiiYat5Hfs";
+  // Web Configuration
+  static const String webApiKey = "AIzaSyDPEAz-ao5mRfyLRwf4VtYjsiiiYat5Hfs";
   static const String authDomain = "sdv-ota-system.firebaseapp.com";
   static const String databaseURL = "https://sdv-ota-system-default-rtdb.europe-west1.firebasedatabase.app";
   static const String projectId = "sdv-ota-system";
   static const String storageBucket = "sdv-ota-system.firebasestorage.app";
   static const String messagingSenderId = "406514704389";
-  static const String appId = "1:406514704389:web:e200a58f5738349ec3fc6c";
+  static const String webAppId = "1:406514704389:web:e200a58f5738349ec3fc6c";
   static const String measurementId = "G-87QXNM347P";
+
+  // Android Configuration (from your google-services.json)
+  static const String androidApiKey = "AIzaSyDPEAz-ao5mRfyLRwf4VtYjsiiiYat5Hfs"; // Replace with actual Android API key
+  static const String androidAppId = "1:406514704389:android:YOUR_ANDROID_APP_ID"; // Replace with actual Android app ID
 
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
@@ -22,16 +28,6 @@ class FirebaseConfig {
         return ios;
       case TargetPlatform.macOS:
         return macos;
-      case TargetPlatform.windows:
-        throw UnsupportedError(
-          'FirebaseOptions have not been configured for Windows - '
-              'you can reconfigure this by running the FlutterFire CLI again.',
-        );
-      case TargetPlatform.linux:
-        throw UnsupportedError(
-          'FirebaseOptions have not been configured for Linux - '
-              'you can reconfigure this by running the FlutterFire CLI again.',
-        );
       default:
         throw UnsupportedError(
           'FirebaseOptions are not supported for this platform.',
@@ -40,50 +36,48 @@ class FirebaseConfig {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: apiKey,
+    apiKey: webApiKey,
     authDomain: authDomain,
     databaseURL: databaseURL,
     projectId: projectId,
     storageBucket: storageBucket,
     messagingSenderId: messagingSenderId,
-    appId: appId,
+    appId: webAppId,
     measurementId: measurementId,
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: apiKey,
+    apiKey: androidApiKey, // Use Android-specific API key
     authDomain: authDomain,
     databaseURL: databaseURL,
     projectId: projectId,
     storageBucket: storageBucket,
     messagingSenderId: messagingSenderId,
-    appId: appId,
+    appId: androidAppId, // Use Android app ID
     measurementId: measurementId,
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: apiKey,
+    apiKey: webApiKey,
     authDomain: authDomain,
     databaseURL: databaseURL,
     projectId: projectId,
     storageBucket: storageBucket,
     messagingSenderId: messagingSenderId,
-    appId: appId,
-    measurementId: measurementId,
+    appId: '1:406514704389:ios:YOUR_IOS_APP_ID',
     iosClientId: '406514704389-yourios.apps.googleusercontent.com',
-    iosBundleId: 'com.example.sdvApplication',
+    iosBundleId: 'com.kynetic.sdv',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: apiKey,
+    apiKey: webApiKey,
     authDomain: authDomain,
     databaseURL: databaseURL,
     projectId: projectId,
     storageBucket: storageBucket,
     messagingSenderId: messagingSenderId,
-    appId: appId,
-    measurementId: measurementId,
+    appId: '1:406514704389:ios:YOUR_IOS_APP_ID',
     iosClientId: '406514704389-yourios.apps.googleusercontent.com',
-    iosBundleId: 'com.example.sdvApplication',
+    iosBundleId: 'com.kynetic.sdv',
   );
 }
